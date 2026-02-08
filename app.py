@@ -232,21 +232,31 @@ def main():
         }
         
         /* 7. Text Visibility Fix - Force Dark Text on Light Background */
-        /* บังคับสีตัวหนังสือทุกจุดให้เข้มชัดบนพื้นหลังสว่าง */
-        h1, h2, h3, p, span, label, .stMarkdown, 
-        [data-testid="stMetricValue"], [data-testid="stMetricLabel"] {
+        /* บังคับสีฟอนต์ทุกอย่างให้อ่านออก (Global Override for Streamlit Cloud) */
+        .stApp, .stApp p, .stApp span, .stApp label, .stApp h1, .stApp h2, .stApp h3, 
+        [data-testid="stMetricValue"], [data-testid="stMetricLabel"], .stMarkdown {
             color: #262730 !important;
+            -webkit-text-fill-color: #262730 !important;
         }
         
-        /* ปรับสีตัวหนังสือในตาราง (DataFrame) */
+        /* ปรับสีตัวหนังสือในตาราง (DataFrame) - เพิ่ม webkit support */
         [data-testid="stTable"] td, [data-testid="stTable"] th,
         [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] th {
             color: #262730 !important;
+            -webkit-text-fill-color: #262730 !important;
         }
         
-        /* ปรับสีตัวหนังสือในองค์ประกอบหลัก */
-        .stApp p, .stApp span, .stApp label, .stApp div {
+        /* บังคับทุกองค์ประกอบย่อยใน Main Content */
+        .main *, .block-container * {
             color: #262730 !important;
+            -webkit-text-fill-color: #262730 !important;
+        }
+        
+        /* ยกเว้น Buttons ที่ต้องการสีขาว */
+        div.stButton > button:first-child,
+        div.stButton > button:first-child * {
+            color: white !important;
+            -webkit-text-fill-color: white !important;
         }
     </style>
     """, unsafe_allow_html=True)
