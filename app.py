@@ -151,8 +151,8 @@ def main():
             transform: translateY(-50%);
             font-family: 'Kanit', sans-serif;
             font-size: 1.1rem;
-            font-weight: 600;
-            color: #0072CE;
+            font-weight: 700 !important;
+            color: #0072CE !important;
             z-index: 999;
         }
         
@@ -229,6 +229,24 @@ def main():
             background-color: #0072CE !important;
             color: white !important;
             box-shadow: 0 -2px 10px rgba(0, 114, 206, 0.15);
+        }
+        
+        /* 7. Text Visibility Fix - Force Dark Text on Light Background */
+        /* บังคับสีตัวหนังสือทุกจุดให้เข้มชัดบนพื้นหลังสว่าง */
+        h1, h2, h3, p, span, label, .stMarkdown, 
+        [data-testid="stMetricValue"], [data-testid="stMetricLabel"] {
+            color: #262730 !important;
+        }
+        
+        /* ปรับสีตัวหนังสือในตาราง (DataFrame) */
+        [data-testid="stTable"] td, [data-testid="stTable"] th,
+        [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] th {
+            color: #262730 !important;
+        }
+        
+        /* ปรับสีตัวหนังสือในองค์ประกอบหลัก */
+        .stApp p, .stApp span, .stApp label, .stApp div {
+            color: #262730 !important;
         }
     </style>
     """, unsafe_allow_html=True)
