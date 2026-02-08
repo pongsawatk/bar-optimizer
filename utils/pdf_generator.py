@@ -1,13 +1,13 @@
 """
 PDF Generator Module - Report Generation
-โมดูลสำหรับสร้างรายงานแผนการตัดเป็นไฟล์ PDF (Cloud Compatible Version)
+โมดูลสำหรับสร้างรายงานแผนการตัดเป็นไฟล์ PDF (Sarabun Font Version)
 """
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from datetime import datetime
@@ -16,25 +16,28 @@ from io import BytesIO
 
 def register_thai_font():
     """
-    Register Thai font for PDF generation (Cross-platform support)
-    ค้นหาฟอนต์ THSarabunNew.ttf ในโปรเจกต์ เพื่อให้ทำงานได้ทั้งบน Windows และ Cloud
+    Register Thai font (Sarabun-Regular) for PDF generation
+    ค้นหาฟอนต์ Sarabun-Regular.ttf ในโปรเจกต์
     """
     try:
         # หาตำแหน่งไฟล์ปัจจุบัน (utils/pdf_generator.py)
         current_dir = os.path.dirname(os.path.abspath(__file__))
         
-        # ลองหาฟอนต์ที่ Root Directory (ขึ้นไป 1 ชั้นจาก utils)
-        font_path_root = os.path.join(current_dir, '..', 'THSarabunNew.ttf')
+        # ชื่อฟอนต์เป้าหมาย
+        font_filename = 'Sarabun-Regular.ttf'
         
-        # ลองหาฟอนต์ในโฟลเดอร์ utils (เผื่อคนวางไว้ที่นี่)
-        font_path_local = os.path.join(current_dir, 'THSarabunNew.ttf')
+        # 1. ลองหาที่ Root Directory (ขึ้นไป 1 ชั้นจาก utils)
+        font_path_root = os.path.join(current_dir, '..', font_filename)
+        
+        # 2. ลองหาในโฟลเดอร์ utils
+        font_path_local = os.path.join(current_dir, font_filename)
         
         if os.path.exists(font_path_root):
-            pdfmetrics.registerFont(TTFont('THSarabunNew', font_path_root))
-            return 'THSarabunNew'
+            pdfmetrics.registerFont(TTFont('Sarabun', font_path_root))
+            return 'Sarabun'
         elif os.path.exists(font_path_local):
-            pdfmetrics.registerFont(TTFont('THSarabunNew', font_path_local))
-            return 'THSarabunNew'
+            pdfmetrics.registerFont(TTFont('Sarabun', font_path_local))
+            return 'Sarabun'
             
     except Exception as e:
         print(f"Font registration warning: {e}")
@@ -105,7 +108,8 @@ def generate_cutting_report(
         fontSize=20,
         textColor=colors.HexColor('#0072CE'), # Contech Blue
         spaceAfter=12,
-        alignment=0
+        alignment=0,
+        leading=24
     )
     
     heading_style = ParagraphStyle(
@@ -115,14 +119,15 @@ def generate_cutting_report(
         fontSize=16,
         textColor=colors.HexColor('#0072CE'),
         spaceAfter=10,
-        spaceBefore=10
+        spaceBefore=10,
+        leading=20
     )
     
     normal_style = ParagraphStyle(
         'CustomNormal',
         parent=styles['Normal'],
         fontName=font_name,
-        fontSize=12,
+        fontSize=11,
         leading=14
     )
     
@@ -130,18 +135,20 @@ def generate_cutting_report(
         'Center',
         parent=styles['Normal'],
         fontName=font_name,
-        fontSize=11,
+        fontSize=10,
         alignment=1, # Center
-        textColor=colors.black
+        textColor=colors.black,
+        leading=12
     )
     
     header_style = ParagraphStyle(
         'Header',
         parent=styles['Normal'],
         fontName=font_name,
-        fontSize=11,
+        fontSize=10,
         alignment=1, # Center
-        textColor=colors.whitesmoke
+        textColor=colors.whitesmoke,
+        leading=12
     )
     
     # Helper functions
@@ -171,7 +178,7 @@ def generate_cutting_report(
     info_table = Table(info_data, colWidths=[60*mm, 100*mm])
     info_table.setStyle(TableStyle([
         ('FONTNAME', (0, 0), (-1, -1), font_name),
-        ('FONTSIZE', (0, 0), (-1, -1), 12),
+        ('FONTSIZE', (0, 0), (-1, -1), 11),
         ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#555555')),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
@@ -180,16 +187,16 @@ def generate_cutting_report(
     story.append(info_table)
     story.append(Spacer(1, 10*mm))
     
-    # Procurement Summary
+    # --- 1. Procurement Summary (Blue) ---
     story.append(Paragraph("<b>Procurement Summary / สรุปการเบิกเหล็ก</b>", heading_style))
     
     summary_data = [[
-        cell_header("Diameter<br/>(mm)"), 
-        cell_header("Qty<br/>(bars)"), 
-        cell_header("Total Len<br/>(m)"), 
-        cell_header("Waste<br/>(m)"), 
-        cell_header("Waste<br/>%"), 
-        cell_header("Weight<br/>(kg)")
+        cell_header("Diameter<br/>ขนาด (mm)"), 
+        cell_header("Quantity<br/>จำนวนเส้น"), 
+        cell_header("Total Length<br/>ความยาวรวม (m)"), 
+        cell_header("Waste<br/>เศษเหลือ (m)"), 
+        cell_header("Waste %<br/>% เศษ"), 
+        cell_header("Weight<br/>น้ำหนัก (kg)")
     ]]
     
     for item in procurement_summary:
@@ -215,7 +222,7 @@ def generate_cutting_report(
         cell_center(f"<b>{total_weight:.2f}</b>")
     ])
     
-    summary_table = Table(summary_data, colWidths=[25*mm, 30*mm, 30*mm, 25*mm, 25*mm, 25*mm], repeatRows=1)
+    summary_table = Table(summary_data, colWidths=[30*mm, 30*mm, 30*mm, 25*mm, 25*mm, 30*mm], repeatRows=1)
     summary_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0072CE')), # Blue Header
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -225,7 +232,7 @@ def generate_cutting_report(
     story.append(summary_table)
     story.append(Spacer(1, 10*mm))
     
-    # Detailed Cutting Plan
+    # --- 2. Detailed Cutting Plan (Dark/Black) ---
     story.append(Paragraph("<b>Detailed Cutting Plan / แผนการตัดรายเส้น</b>", heading_style))
     
     # Group by diameter
@@ -242,12 +249,12 @@ def generate_cutting_report(
         story.append(Spacer(1, 2*mm))
         
         plan_data = [[
-            cell_header("Stock #"), 
-            cell_header("Bar Mark"), 
-            cell_header("Length (m)"), 
-            cell_header("Position"), 
-            cell_header("Waste (m)"), 
-            cell_header("Util %")
+            cell_header("Stock #<br/>เส้นที่"), 
+            cell_header("Bar Mark<br/>รหัสเหล็ก"), 
+            cell_header("Length (m)<br/>ความยาว"), 
+            cell_header("Position<br/>ตำแหน่ง"), 
+            cell_header("Waste (m)<br/>เศษเหลือ"), 
+            cell_header("Util %<br/>% ใช้งาน")
         ]]
         
         for stock in stocks:
@@ -272,7 +279,7 @@ def generate_cutting_report(
                         "", ""
                     ])
         
-        plan_table = Table(plan_data, colWidths=[18*mm, 35*mm, 25*mm, 40*mm, 25*mm, 25*mm], repeatRows=1)
+        plan_table = Table(plan_data, colWidths=[20*mm, 35*mm, 25*mm, 40*mm, 25*mm, 25*mm], repeatRows=1)
         plan_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')), # Dark Header
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -284,7 +291,7 @@ def generate_cutting_report(
         story.append(plan_table)
         story.append(Spacer(1, 5*mm))
     
-    # Remnant Summary (Using your Color Logic)
+    # --- 3. Remnant Summary (Green & Orange) ---
     story.append(Paragraph("<b>Remnant Summary / สรุปเศษเหล็กที่เหลือ</b>", heading_style))
     
     # Reusable remnants (Green)
@@ -293,7 +300,10 @@ def generate_cutting_report(
     
     if remnant_summary['reusable']:
         reusable_data = [[
-            cell_header("Stock #"), cell_header("Diameter"), cell_header("Length (m)"), cell_header("Weight (kg)")
+            cell_header("Stock #<br/>เส้นที่"), 
+            cell_header("Diameter<br/>ขนาด"), 
+            cell_header("Length (m)<br/>ความยาว"), 
+            cell_header("Weight (kg)<br/>น้ำหนัก")
         ]]
         for rem in remnant_summary['reusable']:
             reusable_data.append([
@@ -305,7 +315,7 @@ def generate_cutting_report(
         
         reusable_table = Table(reusable_data, colWidths=[30*mm, 30*mm, 40*mm, 40*mm])
         reusable_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4CAF50')), # Green
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4CAF50')), # Green Header
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ]))
@@ -326,7 +336,10 @@ def generate_cutting_report(
     
     if remnant_summary['scrap']:
         scrap_data = [[
-            cell_header("Stock #"), cell_header("Diameter"), cell_header("Length (m)"), cell_header("Weight (kg)")
+            cell_header("Stock #<br/>เส้นที่"), 
+            cell_header("Diameter<br/>ขนาด"), 
+            cell_header("Length (m)<br/>ความยาว"), 
+            cell_header("Weight (kg)<br/>น้ำหนัก")
         ]]
         for rem in remnant_summary['scrap']:
             scrap_data.append([
@@ -338,7 +351,7 @@ def generate_cutting_report(
         
         scrap_table = Table(scrap_data, colWidths=[30*mm, 30*mm, 40*mm, 40*mm])
         scrap_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FF9800')), # Orange
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FF9800')), # Orange Header
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ]))

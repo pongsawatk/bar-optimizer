@@ -11,8 +11,9 @@ ENV/
 # Environment variables
 .env
 
-# Streamlit
-.streamlit/
+# Streamlit 
+# เราจะข้ามแค่ไฟล์ความลับ แต่เอา config.toml ขึ้นไปเพื่อคุมสีหน้าเว็บ
+.streamlit/secrets.toml
 
 # IDEs
 .vscode/
@@ -25,6 +26,12 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Temporary files
+# Temporary files (ระวังไฟล์ข้อมูลส่วนตัว)
 *.log
 *.tmp
+*.xlsx
+*.pdf
+*.png
+# หมายเหตุ: ถ้ามีไฟล์โลโก้ หรือ Font ให้ระบุข้อยกเว้นไว้
+!contech_logo.png
+!THSarabunNew.ttf
