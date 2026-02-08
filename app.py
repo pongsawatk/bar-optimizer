@@ -664,9 +664,8 @@ def process_file(file, file_type: str, model_name: str):
     ประมวลผลไฟล์และสกัดข้อมูล
     """
     # Check API key
-    import streamlit as st
-# ดึงค่าจาก secrets.toml
-api_key = st.secrets["GEMINI_API_KEY"]
+    # ดึงค่าจาก secrets.toml
+    api_key = st.secrets["GEMINI_API_KEY"]
     if not api_key or api_key == "your_gemini_api_key_here":
         st.error("❌ กรุณาตั้งค่า GEMINI_API_KEY ในไฟล์ .env (Please configure GEMINI_API_KEY in .env file)")
         st.info("📖 อ่านวิธีตั้งค่าได้ที่ README.md")
