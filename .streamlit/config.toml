@@ -1,0 +1,16 @@
+# Lock App to Light Mode (ล็อก Theme เป็น Light)
+# Note: Users cannot change this on Streamlit Cloud deployment
+[theme]
+base = "light"
+primaryColor = "#0072CE"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
+font = "sans serif"
+
+# Browser and UI Settings
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
