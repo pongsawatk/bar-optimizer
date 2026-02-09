@@ -79,6 +79,30 @@ def display_file_preview(file, file_type: str):
             st.error(f"ไม่สามารถแสดงตัวอย่าง Excel (Cannot preview Excel): {str(e)}")
 
 
+def create_sample_template():
+    """
+    Create a sample Excel template with example bar cutting data
+    สร้างไฟล์ Excel ตัวอย่างพร้อมข้อมูลตัวอย่าง
+    """
+    sample_data = {
+        'Bar Mark': ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'D1'],
+        'Diameter (mm)': [12, 16, 12, 20, 16, 25, 12],
+        'Cut Length (m)': [3.5, 4.2, 6.0, 5.5, 3.0, 4.8, 7.2],
+        'Quantity': [10, 15, 8, 12, 20, 6, 5]
+    }
+    
+    df = pd.DataFrame(sample_data)
+    
+    # Create Excel file in memory
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Bar Cutting List')
+    
+    buffer.seek(0)
+    return buffer
+
+
+
 def main():
     """Main application function"""
     
@@ -106,18 +130,18 @@ def main():
 
         /* 1. Global Light Theme & Glass Effect */
         .stApp {
-            background: linear-gradient(135deg, #F5F7FA 0%, #C3CFE2 100%);
+            background: linear-gradient(135deg, #FFFFFF 0%, #F5F7FA 100%);
             background-attachment: fixed; /* พื้นหลังไม่เลื่อนตาม */
         }
         
-        /* 2. Sidebar Styling (Light Gray Theme) */
+        /* 2. Sidebar Styling (Darker Blue Theme) */
         section[data-testid="stSidebar"] {
-            background-color: #EBEDF0 !important; /* สีเทาที่เข้มกว่า Main Area นิดหน่อย */
-            border-right: 1px solid #D1D5DB;
+            background: linear-gradient(180deg, #E5F2FF 0%, #B8D4FF 100%) !important;
+            border-right: 2px solid #0072CE;
         }
-        /* ปรับสีตัวหนังสือใน Sidebar ให้เข้มชัด */
+        /* ปรับสีตัวหนังสือใน Sidebar ให้อ่านง่าย */
         section[data-testid="stSidebar"] * {
-            color: #333333 !important;
+            color: #1a1a1a !important;
         }
         /* ลดช่องว่าง Sidebar (Compact) */
         div[data-testid="stSidebarUserContent"] {
@@ -127,12 +151,12 @@ def main():
             margin-bottom: -0.2rem;
         }
 
-        /* 3. Main Content Glass Containers */
+        /* 3. Main Content Glass Containers - COMPACT VERSION */
         [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
             background: rgba(255, 255, 255, 0.75); /* เพิ่มความทึบแสงให้อ่านง่ายขึ้น */
             backdrop-filter: blur(12px);
             border-radius: 16px;
-            padding: 24px;
+            padding: 15px !important; /* ลดจาก 24px */
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.6);
         }
@@ -177,14 +201,19 @@ def main():
             z-index: 1000;
             backdrop-filter: blur(5px);
         }
-        /* ดันเนื้อหาขึ้นเพื่อไม่ให้ Footer บัง */
+        /* ดันเนื้อหาขึ้นเพื่อไม่ให้ Footer บัง - COMPACT VERSION */
         .main .block-container {
             padding-bottom: 60px;
-            padding-top: 4rem; /* Give space for fixed header */
-            max-width: 95% !important;
+            padding-top: 2rem !important; /* ลดจาก 4rem */
+            max-width: 98% !important; /* ขยายจาก 95% */
         }
         /* ซ่อน Footer เดิมของ Streamlit */
         footer {visibility: hidden;}
+        
+        /* COMPACT SPACING - ลดช่องว่างระหว่าง Elements */
+        .stElementContainer {
+            margin-bottom: -0.5rem !important;
+        }
         
         /* 6. Component Styling Fixes */
         /* Primary Buttons */
@@ -235,15 +264,15 @@ def main():
         /* บังคับสีฟอนต์ทุกอย่างให้อ่านออก (Global Override for Streamlit Cloud) */
         .stApp, .stApp p, .stApp span, .stApp label, .stApp h1, .stApp h2, .stApp h3, 
         [data-testid="stMetricValue"], [data-testid="stMetricLabel"], .stMarkdown {
-            color: #262730 !important;
-            -webkit-text-fill-color: #262730 !important;
+            color: #333333 !important;
+            -webkit-text-fill-color: #333333 !important;
         }
         
         /* ปรับสีตัวหนังสือในตาราง (DataFrame) - เพิ่ม webkit support */
         [data-testid="stTable"] td, [data-testid="stTable"] th,
         [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] th {
-            color: #262730 !important;
-            -webkit-text-fill-color: #262730 !important;
+            color: #333333 !important;
+            -webkit-text-fill-color: #333333 !important;
         }
         
         /* บังคับทุกองค์ประกอบย่อยใน Main Content */
@@ -369,113 +398,183 @@ def main():
             st.error("🔑 API Key: ❌ ยังไม่ได้ตั้งค่า (Not configured)")
             st.caption("กรุณาตั้งค่า GEMINI_API_KEY ในไฟล์ .env")
     
-    # Main area - File upload and preview
-    col1, col2 = st.columns([1, 1])
     
-    with col1:
-        st.header(UI_TEXT["upload_header"])
+    # ==================== TUTORIAL SECTION ====================
+    with st.expander("📖 คู่มือการใช้งาน & ไฟล์ตัวอย่าง (Quick Start Guide)", expanded=False):
+        st.markdown("""
+        ### ยินดีต้อนรับสู่ Bar-Cut Optimizer! 🏗️
         
-        # File uploader
-        uploaded_file = st.file_uploader(
-            label="อัปโหลดไฟล์ที่นี่ (Upload file here)",
-            type=ALLOWED_FILE_TYPES,
-            help=UI_TEXT["upload_help"],
-            label_visibility="collapsed"
-        )
+        ระบบนี้ช่วยคุณวางแผนการตัดเหล็กเส้นอย่างมีประสิทธิภาพ โดยใช้ AI ในการอ่านข้อมูลจากเอกสาร
         
-        if uploaded_file:
-            # Get file info
-            file_size_mb = uploaded_file.size / (1024 * 1024)
-            file_type = uploaded_file.name.split('.')[-1].lower()
-            
-            # Display file info
-            st.info(f"📁 **ไฟล์ (File):** {uploaded_file.name}")
-            st.caption(f"ขนาด (Size): {file_size_mb:.2f} MB | ประเภท (Type): {file_type.upper()}")
-            
-            # Check file size
-            if file_size_mb > MAX_FILE_SIZE_MB:
-                st.error(f"❌ ไฟล์ใหญ่เกินไป (File too large): {file_size_mb:.2f} MB > {MAX_FILE_SIZE_MB} MB")
-                return
-            
-            # Process button
-            if st.button("🚀 ประมวลผลไฟล์ (Process File)", type="primary", use_container_width=True):
-                process_file(uploaded_file, file_type, selected_model)
-    
-    with col2:
-        if uploaded_file:
-            display_file_preview(uploaded_file, file_type)
-    
-    # Display parsed data
-    if st.session_state.parsed_data is not None and len(st.session_state.parsed_data) > 0:
-        st.markdown("---")
-        st.header(UI_TEXT["parsed_data_header"])
+        #### 📋 รูปแบบไฟล์ที่รองรับ:
+        - **PDF** - แปลงเป็นรูปภาพแล้วอ่านด้วย AI
+        - **รูปภาพ** (PNG, JPG) - อ่านตารางจากรูปภาพ
+        - **Excel** (XLSX) - อ่านข้อมูลโดยตรง
         
-        # Create dataframe
-        df = create_dataframe(st.session_state.parsed_data)
+        #### 📊 ข้อมูลที่ต้องมีในไฟล์:
+        """)
         
-        # Rename columns for display (bilingual)
-        df_display = df.copy()
-        df_display.columns = [
-            UI_TEXT["column_bar_mark"],
-            UI_TEXT["column_diameter"],
-            UI_TEXT["column_cut_length"],
-            UI_TEXT["column_quantity"]
-        ]
+        # Sample data table
+        sample_df = pd.DataFrame({
+            'Bar Mark': ['A1', 'A2', 'B1'],
+            'Diameter (mm)': [12, 16, 20],
+            'Cut Length (m)': [3.5, 4.2, 6.0],
+            'Quantity': [10, 15, 8]
+        })
+        st.dataframe(sample_df, use_container_width=True, hide_index=True)
         
-        # Display metrics
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric(UI_TEXT["total_items"], len(df))
-        with col2:
-            st.metric("ขนาดต่างๆ (Sizes)", df['diameter'].nunique())
-        with col3:
-            st.metric("จำนวนรวม (Total Qty)", df['quantity'].sum())
-        with col4:
-            total_length = (df['cut_length'] * df['quantity']).sum()
-            st.metric("ความยาวรวม (Total Length)", f"{total_length:.2f} m")
+        st.markdown("""
+        - **Bar Mark**: รหัสเหล็ก (เช่น A1, B2)
+        - **Diameter**: ขนาดเส้นผ่านศูนย์กลาง (มม.)
+        - **Cut Length**: ความยาวที่ต้องการตัด (เมตร)
+        - **Quantity**: จำนวนชิ้น
         
-        # Splicing info (if exists)
-        if st.session_state.get('splicing_info') and st.session_state.enable_splicing:
-            splicing_info = st.session_state.splicing_info
-            if splicing_info['total_spliced'] > 0:
-                st.warning(
-                    f"⚠️ พบ {splicing_info['total_spliced']} รายการที่ยาวเกิน Stock Length "
-                    f"→ แยกเป็น {splicing_info['additional_pieces']} ชิ้นเพิ่มเติม "
-                    f"(รวม {splicing_info['final_count']} รายการหลังแยก)"
-                )
-                # Show spliced data instead
-                df = pd.DataFrame(st.session_state.spliced_data)
-                df_display = df.copy()
-                if 'note' in df_display.columns:
-                    df_display['note'] = df_display['note'].fillna('')
+        #### 💡 ไม่มีไฟล์สำหรับทดสอบ?
+        ดาวน์โหลดไฟล์ต้นแบบที่เราเตรียมไว้ให้:
+        """)
         
-        # Display table
-        st.dataframe(df_display, use_container_width=True, height=400)
-        
-        # Success message
-        st.success(f"{UI_TEXT['success']} - {len(df)} รายการ (items)")
-        
-        # Download button for CSV
-        csv = df.to_csv(index=False, encoding='utf-8-sig')
+        # Download sample template
+        sample_buffer = create_sample_template()
         st.download_button(
-            label="📥 ดาวน์โหลด CSV (Download CSV)",
-            data=csv,
-            file_name="bar_cutting_data.csv",
-            mime="text/csv",
+            label="📥 ดาวน์โหลดไฟล์ Excel ตัวอย่าง (Download Sample Template)",
+            data=sample_buffer,
+            file_name="bar_cutting_template.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
         )
+    
+    st.divider()
+    
+    # ==================== STEP 1: UPLOAD & PREVIEW ====================
+    st.markdown("""
+    <div style="background-color: #F0F7FF; padding: 10px 15px; border-radius: 8px; border-left: 5px solid #0072CE; margin-bottom: 10px; color: #0072CE; font-weight: 600; font-size: 1.1rem;">
+        1️⃣ ขั้นตอนที่ 1: อัปโหลดและตรวจสอบไฟล์ (Upload & Preview)
+    </div>
+    """, unsafe_allow_html=True)
+    
+    uploaded_file = st.file_uploader(
+        label="📂 อัปโหลดไฟล์ที่นี่ (Upload file here)",
+        type=ALLOWED_FILE_TYPES,
+        help=UI_TEXT["upload_help"]
+    )
+    
+    if uploaded_file:
+        # Get file info
+        file_size_mb = uploaded_file.size / (1024 * 1024)
+        file_type = uploaded_file.name.split('.')[-1].lower()
         
-        # Optimization section
-        st.markdown("---")
-        st.header(UI_TEXT["optimization_header"])
+        # Display file info
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            st.info(f"📁 **ไฟล์ (File):** {uploaded_file.name}")
+            st.caption(f"ขนาด (Size): {file_size_mb:.2f} MB | ประเภท (Type): {file_type.upper()}")
         
-        # Optimize button
-        if st.button(UI_TEXT["optimize_button"], type="primary", use_container_width=True):
-            with st.spinner(UI_TEXT["optimizing"]):
-                # Get stock length from sidebar
+        # Check file size
+        if file_size_mb > MAX_FILE_SIZE_MB:
+            st.error(f"❌ ไฟล์ใหญ่เกินไป (File too large): {file_size_mb:.2f} MB > {MAX_FILE_SIZE_MB} MB")
+        else:
+            # Show preview
+            display_file_preview(uploaded_file, file_type)
+            st.success("✅ อัปโหลดสำเร็จ! พร้อมประมวลผล")
+    
+    st.divider()
+    
+    # ==================== STEP 2: AI EXTRACTION ====================
+    if uploaded_file and file_size_mb <= MAX_FILE_SIZE_MB:
+        st.markdown("""
+        <div style="background-color: #F0F7FF; padding: 10px 15px; border-radius: 8px; border-left: 5px solid #0072CE; margin-bottom: 10px; color: #0072CE; font-weight: 600; font-size: 1.1rem;">
+            2️⃣ ขั้นตอนที่ 2: ประมวลผลด้วย AI (AI Extraction)
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if st.session_state.parsed_data is None:
+            st.info("🤖 พร้อมใช้ AI อ่านข้อมูลจากไฟล์ของคุณ")
+            if st.button("🚀 ประมวลผลไฟล์ (Process File)", type="primary", use_container_width=True):
+                process_file(uploaded_file, file_type, selected_model)
+        else:
+            # Show parsed data
+            st.success(f"✅ อ่านข้อมูลสำเร็จ {len(st.session_state.parsed_data)} รายการ - พร้อมสำหรับการคำนวณ!")
+            
+            # Create dataframe
+            df = create_dataframe(st.session_state.parsed_data)
+            
+            # Display metrics
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("รายการทั้งหมด", len(df))
+            with col2:
+                st.metric("ขนาดต่างๆ", df['diameter'].nunique())
+            with col3:
+                st.metric("จำนวนรวม", df['quantity'].sum())
+            with col4:
+                total_length = (df['cut_length'] * df['quantity']).sum()
+                st.metric("ความยาวรวม", f"{total_length:.2f} m")
+            
+            # Rename columns for display
+            df_display = df.copy()
+            df_display.columns = [
+                UI_TEXT["column_bar_mark"],
+                UI_TEXT["column_diameter"],
+                UI_TEXT["column_cut_length"],
+                UI_TEXT["column_quantity"]
+            ]
+            
+            # Splicing info (if exists)
+            if st.session_state.get('splicing_info') and st.session_state.enable_splicing:
+                splicing_info = st.session_state.splicing_info
+                if splicing_info['total_spliced'] > 0:
+                    st.warning(
+                        f"⚠️ พบ {splicing_info['total_spliced']} รายการที่ยาวเกิน Stock Length "
+                        f"→ แยกเป็น {splicing_info['additional_pieces']} ชิ้นเพิ่มเติม "
+                        f"(รวม {splicing_info['final_count']} รายการหลังแยก)"
+                    )
+                    # Show spliced data instead
+                    df = pd.DataFrame(st.session_state.spliced_data)
+                    df_display = df.copy()
+                    if 'note' in df_display.columns:
+                        df_display['note'] = df_display['note'].fillna('')
+            
+            # Display table
+            st.dataframe(df_display, use_container_width=True, height=400)
+            
+            # Download CSV
+            csv = df.to_csv(index=False, encoding='utf-8-sig')
+            st.download_button(
+                label="📥 ดาวน์โหลด CSV (Download CSV)",
+                data=csv,
+                file_name="bar_cutting_data.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+        
+        st.divider()
+    
+    # ==================== STEP 3: CONFIGURATION & OPTIMIZATION ====================
+    if st.session_state.parsed_data is not None and len(st.session_state.parsed_data) > 0:
+        st.markdown("""
+        <div style="background-color: #F0F7FF; padding: 10px 15px; border-radius: 8px; border-left: 5px solid #0072CE; margin-bottom: 10px; color: #0072CE; font-weight: 600; font-size: 1.1rem;">
+            3️⃣ ขั้นตอนที่ 3: ตั้งค่าและคำนวณ (Configure & Optimize)
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Settings summary
+        splicing_status = f"✅ เปิดใช้งาน (Lap: {st.session_state.lap_factor}d)" if st.session_state.enable_splicing else "❌ ปิดใช้งาน"
+        
+        st.info(f"""
+**การตั้งค่าปัจจุบัน (Current Settings):**
+- 📏 ความยาวท่อน (Stock Length): **{standard_length if stock_mode == "standard" else 10} m**
+- ✂️ ค่าเผื่อใบตัด (Cutting Tolerance): **{cutting_tolerance} mm**
+- 🔗 การต่อเหล็ก (Splicing): {splicing_status}
+
+💡 ต้องการปรับค่า? ไปที่ Sidebar ด้านซ้าย
+        """)
+        
+        if st.button("⚡ เริ่มวางแผนการตัด (Optimize Cutting)", type="primary", use_container_width=True):
+            with st.spinner("🔄 กำลังคำนวณแผนการตัดที่เหมาะสม..."):
+                # Get stock length
                 stock_length = standard_length if stock_mode == "standard" else 10
                 
-                # Store in session state for later use (PDF generation)
+                # Store in session state
                 st.session_state.stock_length = stock_length
                 st.session_state.cutting_tolerance = cutting_tolerance
                 
@@ -503,180 +602,187 @@ def main():
                 st.session_state.optimization_result = result
                 st.rerun()
         
-        # Display optimization results
-        if st.session_state.optimization_result is not None:
-            result = st.session_state.optimization_result
+        st.divider()
+    
+    # ==================== STEP 4: RESULTS & EXPORT ====================
+    if st.session_state.optimization_result is not None:
+        st.markdown("""
+        <div style="background-color: #F0F7FF; padding: 10px 15px; border-radius: 8px; border-left: 5px solid #0072CE; margin-bottom: 10px; color: #0072CE; font-weight: 600; font-size: 1.1rem;">
+            4️⃣ ขั้นตอนที่ 4: ผลลัพธ์และรายงาน (Results & Export)
+        </div>
+        """, unsafe_allow_html=True)
+        
+        result = st.session_state.optimization_result
+        
+        # Procurement Summary
+        st.subheader("📦 " + UI_TEXT["procurement_summary"])
+        
+        summary_df = pd.DataFrame(result.procurement_summary)
+        summary_df.columns = [
+            "ขนาด (Diameter) [mm]",
+            "ความยาวท่อน (Stock) [m]",
+            "จำนวนเส้น (Quantity)",
+            "ความยาวรวม (Total) [m]",
+            "เศษเหลือ (Waste) [m]",
+            "% เศษ (Waste %)",
+            "น้ำหนักรวม (Weight) [kg]"
+        ]
+        
+        # Format columns
+        summary_df["ขนาด (Diameter) [mm]"] = summary_df["ขนาด (Diameter) [mm]"].apply(lambda x: f"DB{x}")
+        summary_df["ความยาวรวม (Total) [m]"] = summary_df["ความยาวรวม (Total) [m]"].apply(lambda x: f"{x:.2f}")
+        summary_df["เศษเหลือ (Waste) [m]"] = summary_df["เศษเหลือ (Waste) [m]"].apply(lambda x: f"{x:.2f}")
+        summary_df["% เศษ (Waste %)"] = summary_df["% เศษ (Waste %)"].apply(lambda x: f"{x:.1f}%")
+        summary_df["น้ำหนักรวม (Weight) [kg]"] = summary_df["น้ำหนักรวม (Weight) [kg]"].apply(lambda x: f"{x:.2f}")
+        
+        st.dataframe(summary_df, use_container_width=True, hide_index=True)
+        
+        # Summary metrics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("รวมจำนวนเส้น", result.total_stock_used)
+        with col2:
+            st.metric("เศษรวม", f"{result.total_waste:.2f} m")
+        with col3:
+            total_length = sum(item['total_length'] for item in result.procurement_summary)
+            waste_pct = (result.total_waste / total_length * 100) if total_length > 0 else 0
+            st.metric("% เศษเฉลี่ย", f"{waste_pct:.1f}%")
+        with col4:
+            st.metric("น้ำหนักรวม", f"{result.total_weight:.2f} kg")
+        
+        st.markdown("---")
+        
+        # Remnant Summary
+        st.subheader("🔄 สรุปเศษเหล็กที่เหลือ (Remnant Summary)")
+        
+        remnant_col1, remnant_col2 = st.columns(2)
+        
+        with remnant_col1:
+            st.write("**♻️ เศษใช้งานต่อได้ (Reusable) - ยาว ≥ 1.0m**")
+            if result.remnant_summary['reusable']:
+                reusable_data = []
+                for rem in result.remnant_summary['reusable']:
+                    reusable_data.append({
+                        "เส้นที่": rem['stock_id'],
+                        "ขนาด": f"DB{rem['diameter']}",
+                        "ความยาว (m)": f"{rem['length']:.2f}",
+                        "น้ำหนัก (kg)": f"{rem['weight']:.2f}"
+                    })
+                reusable_df = pd.DataFrame(reusable_data)
+                st.dataframe(reusable_df, use_container_width=True, hide_index=True)
+                
+                total_reusable_length = sum(rem['length'] for rem in result.remnant_summary['reusable'])
+                total_reusable_weight = sum(rem['weight'] for rem in result.remnant_summary['reusable'])
+                st.success(f"รวม: {len(result.remnant_summary['reusable'])} ชิ้น | {total_reusable_length:.2f} m | {total_reusable_weight:.2f} kg")
+            else:
+                st.info("ไม่มีเศษที่สามารถใช้ได้")
+        
+        with remnant_col2:
+            st.write("**🗑️ เศษทิ้ง (Scrap) - ยาว < 1.0m**")
+            if result.remnant_summary['scrap']:
+                scrap_data = []
+                for rem in result.remnant_summary['scrap']:
+                    scrap_data.append({
+                        "เส้นที่": rem['stock_id'],
+                        "ขนาด": f"DB{rem['diameter']}",
+                        "ความยาว (m)": f"{rem['length']:.2f}",
+                        "น้ำหนัก (kg)": f"{rem['weight']:.2f}"
+                    })
+                scrap_df = pd.DataFrame(scrap_data)
+                st.dataframe(scrap_df, use_container_width=True, hide_index=True)
+                
+                total_scrap_length = sum(rem['length'] for rem in result.remnant_summary['scrap'])
+                total_scrap_weight = sum(rem['weight'] for rem in result.remnant_summary['scrap'])
+                st.warning(f"รวม: {len(result.remnant_summary['scrap'])} ชิ้น | {total_scrap_length:.2f} m | {total_scrap_weight:.2f} kg")
+            else:
+                st.info("ไม่มีเศษทิ้ง")
+        
+        st.markdown("---")
+        
+        # Detailed Cutting Plan
+        st.subheader("📋 " + UI_TEXT["cutting_plan"])
+        
+        # Group by diameter
+        plan_by_diameter = {}
+        for stock in result.cutting_plan:
+            if stock.diameter not in plan_by_diameter:
+                plan_by_diameter[stock.diameter] = []
+            plan_by_diameter[stock.diameter].append(stock)
+        
+        for diameter in sorted(plan_by_diameter.keys()):
+            stocks = plan_by_diameter[diameter]
+            st.write(f"### ขนาด DB{diameter} mm")
             
-            # Procurement Summary
-            st.subheader(UI_TEXT["procurement_summary"])
+            # Create plan data
+            plan_data = []
+            for stock in stocks:
+                for i, cut in enumerate(stock.cuts):
+                    if i == 0:
+                        plan_data.append({
+                            "เส้นที่ (Stock #)": str(stock.stock_id),
+                            "รหัสเหล็ก (Bar Mark)": cut['bar_mark'],
+                            "ความยาว (Length) [m]": f"{cut['length']:.2f}",
+                            "ตำแหน่ง (Position) [m]": f"{cut['start']:.2f} - {cut['end']:.2f}",
+                            "เศษเหลือ (Waste) [m]": f"{stock.remaining:.2f}",
+                            "% ใช้งาน (Utilization)": f"{stock.utilization:.1f}%"
+                        })
+                    else:
+                        plan_data.append({
+                            "เส้นที่ (Stock #)": "",
+                            "รหัสเหล็ก (Bar Mark)": cut['bar_mark'],
+                            "ความยาว (Length) [m]": f"{cut['length']:.2f}",
+                            "ตำแหน่ง (Position) [m]": f"{cut['start']:.2f} - {cut['end']:.2f}",
+                            "เศษเหลือ (Waste) [m]": "",
+                            "% ใช้งาน (Utilization)": ""
+                        })
             
-            summary_df = pd.DataFrame(result.procurement_summary)
-            summary_df.columns = [
-                "ขนาด (Diameter) [mm]",
-                "ความยาวท่อน (Stock) [m]",
-                "จำนวนเส้น (Quantity)",
-                "ความยาวรวม (Total) [m]",
-                "เศษเหลือ (Waste) [m]",
-                "% เศษ (Waste %)",
-                "น้ำหนักรวม (Weight) [kg]"
-            ]
+            plan_df = pd.DataFrame(plan_data)
+            st.dataframe(plan_df, use_container_width=True, hide_index=True)
             
-            # Format columns
-            summary_df["ขนาด (Diameter) [mm]"] = summary_df["ขนาด (Diameter) [mm]"].apply(lambda x: f"DB{x}")
-            summary_df["ความยาวรวม (Total) [m]"] = summary_df["ความยาวรวม (Total) [m]"].apply(lambda x: f"{x:.2f}")
-            summary_df["เศษเหลือ (Waste) [m]"] = summary_df["เศษเหลือ (Waste) [m]"].apply(lambda x: f"{x:.2f}")
-            summary_df["% เศษ (Waste %)"] = summary_df["% เศษ (Waste %)"].apply(lambda x: f"{x:.1f}%")
-            summary_df["น้ำหนักรวม (Weight) [kg]"] = summary_df["น้ำหนักรวม (Weight) [kg]"].apply(lambda x: f"{x:.2f}")
-            
-            st.dataframe(summary_df, use_container_width=True, hide_index=True)
-            
-            # Summary metrics
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("รวมจำนวนเส้น (Total Bars)", result.total_stock_used)
-            with col2:
-                st.metric("เศษรวม (Total Waste)", f"{result.total_waste:.2f} m")
-            with col3:
-                total_length = sum(item['total_length'] for item in result.procurement_summary)
-                waste_pct = (result.total_waste / total_length * 100) if total_length > 0 else 0
-                st.metric("% เศษโดยเฉลี่ย (Avg Waste %)", f"{waste_pct:.1f}%")
-            with col4:
-                st.metric("น้ำหนักรวม (Total Weight)", f"{result.total_weight:.2f} kg")
+            # Visual bars
+            st.write("**แผนภาพการใช้งาน (Utilization Visualization)**")
+            for stock in stocks:
+                utilized = ((stock.stock_length - stock.remaining) / stock.stock_length) * 100
+                waste = (stock.remaining / stock.stock_length) * 100
+                
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    st.progress(utilized / 100, text=f"เส้นที่ {stock.stock_id}: {utilized:.1f}% ใช้งาน, {waste:.1f}% เศษ")
+                with col2:
+                    st.caption(f"{stock.remaining:.2f}m waste")
             
             st.markdown("---")
-            
-            # Remnant Summary
-            st.subheader("🔄 สรุปเศษเหล็กที่เหลือ (Remnant Summary)")
-            
-            remnant_col1, remnant_col2 = st.columns(2)
-            
-            with remnant_col1:
-                st.write("**♻️ เศษใช้งานต่อได้ (Reusable) - ยาว ≥ 1.0m**")
-                if result.remnant_summary['reusable']:
-                    reusable_data = []
-                    for rem in result.remnant_summary['reusable']:
-                        reusable_data.append({
-                            "เส้นที่": rem['stock_id'],
-                            "ขนาด": f"DB{rem['diameter']}",
-                            "ความยาว (m)": f"{rem['length']:.2f}",
-                            "น้ำหนัก (kg)": f"{rem['weight']:.2f}"
-                        })
-                    reusable_df = pd.DataFrame(reusable_data)
-                    st.dataframe(reusable_df, use_container_width=True, hide_index=True)
+        
+        # PDF Download
+        st.subheader("📄 " + UI_TEXT["download_pdf"])
+        
+        if st.button("🔄 สร้าง PDF Report", use_container_width=True):
+            with st.spinner("กำลังสร้างรายงาน... (Generating report...)"):
+                try:
+                    pdf_buffer = generate_cutting_report(
+                        result.procurement_summary,
+                        result.cutting_plan,
+                        result.total_waste,
+                        st.session_state.stock_length,
+                        st.session_state.cutting_tolerance,
+                        result.remnant_summary,
+                        result.total_weight,
+                        project_name=f"Project - {st.session_state.uploaded_file_name or 'Unknown'}",
+                        splicing_enabled=st.session_state.enable_splicing,
+                        lap_factor=st.session_state.lap_factor
+                    )
                     
-                    total_reusable_length = sum(rem['length'] for rem in result.remnant_summary['reusable'])
-                    total_reusable_weight = sum(rem['weight'] for rem in result.remnant_summary['reusable'])
-                    st.success(f"รวม: {len(result.remnant_summary['reusable'])} ชิ้น | {total_reusable_length:.2f} m | {total_reusable_weight:.2f} kg")
-                else:
-                    st.info("ไม่มีเศษที่สามารถใช้ได้")
-            
-            with remnant_col2:
-                st.write("**🗑️ เศษทิ้ง (Scrap) - ยาว < 1.0m**")
-                if result.remnant_summary['scrap']:
-                    scrap_data = []
-                    for rem in result.remnant_summary['scrap']:
-                        scrap_data.append({
-                            "เส้นที่": rem['stock_id'],
-                            "ขนาด": f"DB{rem['diameter']}",
-                            "ความยาว (m)": f"{rem['length']:.2f}",
-                            "น้ำหนัก (kg)": f"{rem['weight']:.2f}"
-                        })
-                    scrap_df = pd.DataFrame(scrap_data)
-                    st.dataframe(scrap_df, use_container_width=True, hide_index=True)
-                    
-                    total_scrap_length = sum(rem['length'] for rem in result.remnant_summary['scrap'])
-                    total_scrap_weight = sum(rem['weight'] for rem in result.remnant_summary['scrap'])
-                    st.warning(f"รวม: {len(result.remnant_summary['scrap'])} ชิ้น | {total_scrap_length:.2f} m | {total_scrap_weight:.2f} kg")
-                else:
-                    st.info("ไม่มีเศษทิ้ง")
-            
-            st.markdown("---")
-            
-            # Detailed Cutting Plan
-            st.subheader(UI_TEXT["cutting_plan"])
-            
-            # Group by diameter
-            plan_by_diameter = {}
-            for stock in result.cutting_plan:
-                if stock.diameter not in plan_by_diameter:
-                    plan_by_diameter[stock.diameter] = []
-                plan_by_diameter[stock.diameter].append(stock)
-            
-            for diameter in sorted(plan_by_diameter.keys()):
-                stocks = plan_by_diameter[diameter]
-                st.write(f"### ขนาด DB{diameter} mm")
-                
-                # Create plan data
-                plan_data = []
-                for stock in stocks:
-                    # Add each cut
-                    for i, cut in enumerate(stock.cuts):
-                        if i == 0:
-                            plan_data.append({
-                                "เส้นที่ (Stock #)": str(stock.stock_id),
-                                "รหัสเหล็ก (Bar Mark)": cut['bar_mark'],
-                                "ความยาว (Length) [m]": f"{cut['length']:.2f}",
-                                "ตำแหน่ง (Position) [m]": f"{cut['start']:.2f} - {cut['end']:.2f}",
-                                "เศษเหลือ (Waste) [m]": f"{stock.remaining:.2f}",
-                                "% ใช้งาน (Utilization)": f"{stock.utilization:.1f}%"
-                            })
-                        else:
-                            plan_data.append({
-                                "เส้นที่ (Stock #)": "",
-                                "รหัสเหล็ก (Bar Mark)": cut['bar_mark'],
-                                "ความยาว (Length) [m]": f"{cut['length']:.2f}",
-                                "ตำแหน่ง (Position) [m]": f"{cut['start']:.2f} - {cut['end']:.2f}",
-                                "เศษเหลือ (Waste) [m]": "",
-                                "% ใช้งาน (Utilization)": ""
-                            })
-                
-                plan_df = pd.DataFrame(plan_data)
-                st.dataframe(plan_df, use_container_width=True, hide_index=True)
-                
-                # Visual bars
-                st.write("**แผนภาพการใช้งาน (Utilization Visualization)**")
-                for stock in stocks:
-                    # Create visual bar
-                    utilized = ((stock.stock_length - stock.remaining) / stock.stock_length) * 100
-                    waste = (stock.remaining / stock.stock_length) * 100
-                    
-                    col1, col2 = st.columns([4, 1])
-                    with col1:
-                        st.progress(utilized / 100, text=f"เส้นที่ {stock.stock_id}: {utilized:.1f}% ใช้งาน, {waste:.1f}% เศษ")
-                    with col2:
-                        st.caption(f"{stock.remaining:.2f}m waste")
-                
-                st.markdown("---")
-            
-            # PDF Download
-            st.subheader(UI_TEXT["download_pdf"])
-            
-            if st.button("🔄 สร้าง PDF Report", use_container_width=True):
-                with st.spinner("กำลังสร้างรายงาน... (Generating report...)"):
-                    try:
-                        pdf_buffer = generate_cutting_report(
-                            result.procurement_summary,
-                            result.cutting_plan,
-                            result.total_waste,
-                            st.session_state.stock_length,
-                            st.session_state.cutting_tolerance,
-                            result.remnant_summary,
-                            result.total_weight,
-                            project_name=f"Project - {st.session_state.uploaded_file_name or 'Unknown'}",
-                            splicing_enabled=st.session_state.enable_splicing,
-                            lap_factor=st.session_state.lap_factor
-                        )
-                        
-                        st.download_button(
-                            label="📥 ดาวน์โหลด PDF",
-                            data=pdf_buffer,
-                            file_name=f"cutting_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                            mime="application/pdf",
-                            use_container_width=True
-                        )
-                        st.success("✅ สร้างรายงานสำเร็จ!")
-                    except Exception as e:
-                        st.error(f"เกิดข้อผิดพลาดในการสร้าง PDF: {str(e)}")
+                    st.download_button(
+                        label="📥 ดาวน์โหลด PDF",
+                        data=pdf_buffer,
+                        file_name=f"cutting_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                    st.success("✅ สร้างรายงานสำเร็จ!")
+                except Exception as e:
+                    st.error(f"เกิดข้อผิดพลาดในการสร้าง PDF: {str(e)}")
+
     
     # Footer with branding
     st.markdown("""
