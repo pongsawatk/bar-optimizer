@@ -1,10 +1,12 @@
 """
 Parser Module - Data Extraction from Files
 โมดูลสำหรับแปลงข้อมูลจากไฟล์ต่างๆ (PDF, Images, Excel)
+Optimized for Gemini 3 with system instructions and native JSON output.
 """
 
 import json
 import io
+import re
 from typing import List, Dict, Any, Optional
 import pandas as pd
 from PIL import Image
@@ -18,6 +20,17 @@ from config import (
     REQUIRED_FIELDS
 )
 
+# System instruction for Gemini 3 - sets the expert persona globally
+SYSTEM_INSTRUCTION = """You are an expert Structural Engineer specialized in analyzing steel cutting diagrams, bar schedules, and rebar data.
+
+Core principles:
+- You extract steel bar cutting data with precision and domain expertise.
+- You always return valid JSON arrays and nothing else.
+- You never include markdown formatting, code blocks, explanations, or conversational text.
+- You handle blurry, rotated, or low-quality images by using engineering context to infer values.
+- You normalize all units: diameter in mm (integer), length in meters (float), quantity as integer.
+- You skip invalid, incomplete, or header/summary rows automatically."""
+
 
 class FileParser:
     """
@@ -27,14 +40,17 @@ class FileParser:
     
     def __init__(self, api_key: str, model_name: str = DEFAULT_GEMINI_MODEL):
         """
-        Initialize parser with Gemini API key
+        Initialize parser with Gemini API key and system instruction.
         
         Args:
             api_key: Google Gemini API key
             model_name: Name of the Gemini model to use
         """
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(model_name)
+        self.model = genai.GenerativeModel(
+            model_name,
+            system_instruction=SYSTEM_INSTRUCTION,
+        )
     
     def parse_file(self, file, file_type: str) -> tuple[List[Dict[str, Any]], Optional[str]]:
         """
@@ -110,19 +126,18 @@ class FileParser:
     
     def _parse_image_with_vision(self, image: Image.Image) -> tuple[List[Dict[str, Any]], Optional[str]]:
         """
-        Use Gemini Vision to extract data from image
-        ใช้ Gemini Vision อ่านข้อมูลจากรูปภาพ
+        Use Gemini Vision to extract data from image.
+        Leverages system_instruction for persona and response_mime_type for clean JSON.
         """
         try:
-            # Generate content with Vision model
             response = self.model.generate_content(
                 [VISION_PROMPT, image],
                 generation_config=genai.types.GenerationConfig(
                     temperature=GEMINI_TEMPERATURE,
+                    response_mime_type="application/json",
                 )
             )
             
-            # Extract JSON from response
             return self._extract_json_from_response(response)
             
         except json.JSONDecodeError as e:
@@ -150,19 +165,18 @@ class FileParser:
 
     def _parse_text_with_llm(self, text_data: str) -> tuple[List[Dict[str, Any]], Optional[str]]:
         """
-        Use Gemini to extract data from text (CSV/Markdown)
-        ใช้ Gemini อ่านข้อมูลจากข้อความ
+        Use Gemini to extract data from text (CSV/Markdown).
+        Leverages system_instruction for persona and response_mime_type for clean JSON.
         """
         try:
-            # Generate content with LLM
             response = self.model.generate_content(
                 [DATA_PROMPT, text_data],
                 generation_config=genai.types.GenerationConfig(
                     temperature=GEMINI_TEMPERATURE,
+                    response_mime_type="application/json",
                 )
             )
             
-            # Extract JSON from response (reuse logic)
             return self._extract_json_from_response(response)
             
         except Exception as e:
@@ -170,33 +184,41 @@ class FileParser:
 
     def _extract_json_from_response(self, response) -> tuple[List[Dict[str, Any]], Optional[str]]:
         """
-        Helper to extract and validate JSON from Gemini response
+        Extract and validate JSON from Gemini response.
+        With response_mime_type="application/json", the model returns clean JSON natively.
+        Fallback stripping is kept for robustness but should rarely be needed.
         """
         try:
             response_text = response.text.strip()
             
-            # Remove markdown code blocks if present
+            # Fallback: strip markdown code blocks if model still wraps them
             if response_text.startswith("```"):
-                # Remove ```json or ``` at start
-                response_text = response_text.split("\n", 1)[1]
-                # Remove ``` at end
-                if response_text.endswith("```"):
-                    response_text = response_text.rsplit("```", 1)[0]
-            
-            response_text = response_text.strip()
+                response_text = re.sub(
+                    r"^```(?:json)?\s*\n?", "", response_text
+                )
+                response_text = re.sub(r"\n?```\s*$", "", response_text)
+                response_text = response_text.strip()
             
             # Parse JSON
             data = json.loads(response_text)
             
-            # Validate data
+            # Ensure top-level is a list
+            if isinstance(data, dict):
+                # Handle case where model wraps array in an object, e.g. {"items": [...]}
+                for key in ("items", "data", "bars", "results"):
+                    if key in data and isinstance(data[key], list):
+                        data = data[key]
+                        break
+                else:
+                    return [], "ข้อมูลที่ได้ไม่ใช่ array (Data is not an array)"
+            
             if not isinstance(data, list):
                 return [], "ข้อมูลที่ได้ไม่ใช่ array (Data is not an array)"
             
             # Validate each item
-            validated_data = []
-            for item in data:
-                if self._validate_item(item):
-                    validated_data.append(item)
+            validated_data = [
+                item for item in data if self._validate_item(item)
+            ]
             
             return validated_data, None
             

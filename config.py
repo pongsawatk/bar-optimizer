@@ -6,11 +6,11 @@ Configuration file for Bar-Cut Optimizer Application
 # Gemini Model Settings
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 AVAILABLE_MODELS = [
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
     "gemini-2.5-flash",
-    "gemini-1.5-flash",
-    "gemini-1.5-pro",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-pro",
+    "gemini-3-flash-preview",
+    "gemini-3-pro-preview",
 ]
 GEMINI_TEMPERATURE = 0.1  # Low temperature for consistent output
 
@@ -54,56 +54,95 @@ UI_TEXT = {
     "optimizing": "กำลังคำนวณแผนการตัด... (Optimizing...)",
 }
 
-# Gemini Prompt Template
+# Gemini Prompt Template (Optimized for Gemini 3)
 VISION_PROMPT = """
-คุณเป็น AI ที่เชี่ยวชาญในการอ่านตารางข้อมูลตัดเหล็ก (Bar Cutting List) จากรูปภาพ
-หน้าที่ของคุณคือ:
-1. วิเคราะห์รูปภาพและค้นหาตารางที่มีข้อมูล: รหัสเหล็ก (Bar Mark), ขนาด (Diameter), ความยาว (Length), และจำนวน (Quantity)
-2. สกัดข้อมูลออกมาให้ครบถ้วนและถูกต้องที่สุด โดยเฉพาะตัวเลข
+You are an expert Structural Engineer specialized in analyzing steel cutting diagrams and bar schedules.
 
-ให้ส่งคืนข้อมูลเป็น JSON Array ในรูปแบบนี้เท่านั้น:
+Your task is to extract structured data from construction documents, even if the image quality is poor, blurry, rotated, or contains handwritten annotations.
+
+You must identify and extract these fields from tables:
+- **Bar Mark**: Identification code (e.g., B1, C1, F1, DB12). Look for columns labeled "Mark", "Bar Mark", "รหัส", or similar.
+- **Diameter**: Rebar diameter in millimeters (e.g., 12, 16, 20, 25). This may appear as "DB12", "Ø12", "12mm", or just "12". Extract only the numeric value.
+- **Cut Length**: Required cutting length in meters. May appear in columns labeled "Length", "Cut Length", "ความยาว", "L=", or with units like "m", "mm", "cm". Always convert to meters.
+- **Quantity**: Number of pieces required. Look for "Qty", "Quantity", "จำนวน", "No.", or "Pcs".
+
+**CRITICAL OUTPUT REQUIREMENTS**:
+1. Return ONLY a valid JSON array, nothing else.
+2. Do NOT include markdown code blocks (```json```).
+3. Do NOT include any explanatory text, greetings, or conversational filler.
+4. Output format:
 [
   {
-    "bar_mark": "string - ชื่อหรือรหัสเหล็ก เช่น B1, C1, F1 (ห้ามว่าง)",
-    "diameter": integer - ขนาดเส้นผ่านศูนย์กลางหน่วยมม. เช่น 12, 16, 20, 25 (เป็นตัวเลขเท่านั้น)",
-    "cut_length": float - ความยาวตัดหน่วยเมตร เช่น 2.50, 4.20 (เป็นตัวเลขทศนิยม)",
-    "quantity": integer - จำนวนท่อนที่ต้องตัด (เป็นตัวเลขจำนวนเต็ม)
+    "bar_mark": "string",
+    "diameter": integer,
+    "cut_length": float,
+    "quantity": integer
   }
 ]
 
-กฎสำคัญ:
-- ส่งคืนเฉพาะ JSON เท่านั้น ห้ามมี Markdown code block (```json ... ```) หรือข้อความอารัมภบท
-- ข้อมูลใน JSON ต้องเป็นประเภทข้อมูลที่กำหนดเท่านั้น (String, Integer, Float)
-- ตรวจสอบหัวตารางให้ดี เพื่อจับคู่ข้อมูลให้ถูกคอลัมน์
-- ถ้ามีหลายตาราง ให้รวมข้อมูลทั้งหมดมาใน Array เดียว
-- ถ้าอ่านค่าไม่ได้ หรือไม่มั่นใจ ให้ข้ามแถวนั้นไป หรือใส่ค่าที่น่าจะเป็นที่สุด
-- ถ้าไม่พบข้อมูลเหล็กเลย ให้ส่งคืน []
+**Image Analysis Guidelines**:
+- If the image is rotated, mentally rotate it to read correctly
+- If text is blurry, use context from surrounding cells to infer values
+- If handwritten, carefully distinguish between similar digits (1 vs 7, 5 vs 6, 0 vs 8)
+- If multiple tables exist, combine all data into one array
+- Skip rows that are clearly headers, totals, or non-data entries
+- If a value is completely illegible, skip that row entirely
+- If no valid data is found, return an empty array: []
+
+**Data Type Enforcement**:
+- bar_mark: string (preserve as-is, e.g., "B1", "DB12")
+- diameter: integer only (extract numeric part: "DB12" → 12)
+- cut_length: float in meters (convert if needed: "2500mm" → 2.5)
+- quantity: integer only (whole numbers)
+
+Return the JSON array immediately without any preamble.
 """
 
-# Text Data Prompt (for Excel/CSV)
+# Text Data Prompt (for Excel/CSV) - Optimized for Gemini 3
 DATA_PROMPT = """
-คุณเป็น AI ที่เชี่ยวชาญในการแปลงข้อมูลจากตาราง (Excel/CSV) ให้เป็น JSON สำหรับระบบตัดเหล็ก
-ข้อมูลที่ได้รับจะเป็นตารางในรูปแบบ Text/CSV/Markdown
+You are an expert Structural Engineer processing tabular steel cutting data from Excel/CSV formats.
 
-หน้าที่ของคุณคือ:
-1. อ่านข้อมูลจาก text ที่ให้ไป และตีความความหมายของแต่ละคอลัมน์
-    - ค้นหาข้อมูล: รหัสเหล็ก (Bar Mark), ขนาด (Diameter), ความยาว (Length), และจำนวน (Quantity)
-    - ข้อมูลอาจจะมีการปนเปื้อน เช่น "DB12", "12mm", "2.50m", "L=2.5" เป็นต้น ต้องแปลงให้เป็นตัวเลขที่ถูกต้อง
-2. สกัดข้อมูลออกมาเป็น JSON Array
+Your task is to parse structured or semi-structured tabular data and extract steel bar cutting information, handling various formats and units intelligently.
 
-ให้ส่งคืนข้อมูลเป็น JSON Array ในรูปแบบนี้เท่านั้น:
+**Input Format**: You will receive text/CSV/Markdown table data that may contain:
+- Mixed formats: "DB12", "Ø16mm", "#20", "25MM"
+- Length in various units: "2.5m", "2500mm", "250cm", "L=2.5"
+- Quantity formats: "10 pcs", "10x", "10 nos", "10"
+- Inconsistent column names or ordering
+
+**Required Output Fields**:
+- **bar_mark**: Identifier/code (preserve as-is, e.g., "B1", "DB12", "F-01")
+- **diameter**: Rebar diameter in mm (extract numeric only: "DB16" → 16, "Ø12mm" → 12)
+- **cut_length**: Length in meters (normalize: "2500mm" → 2.5, "250cm" → 2.5, "2.5m" → 2.5)
+- **quantity**: Integer count (extract numeric: "10 pcs" → 10, "5x" → 5)
+
+**CRITICAL OUTPUT REQUIREMENTS**:
+1. Return ONLY a valid JSON array.
+2. Do NOT use markdown code blocks (```json```).
+3. Do NOT include explanations, notes, or conversational text.
+4. Output format:
 [
   {
-    "bar_mark": "string - ชื่อหรือรหัสเหล็ก (ห้ามว่าง)",
-    "diameter": integer - ขนาดเส้นผ่านศูนย์กลางหน่วยมม. (เอาเฉพาะตัวเลข) เช่น "DB16" -> 16, "12mm" -> 12
-    "cut_length": float - ความยาวตัดหน่วยเมตร (เอาเฉพาะตัวเลข) เช่น "2.50m" -> 2.50, "2500" -> 2.5 (ถ้าหน่วยเป็น mm ต้องแปลงเป็น m)
-    "quantity": integer - จำนวนท่อน (ตัวเลขจำนวนเต็ม)
+    "bar_mark": "string",
+    "diameter": integer,
+    "cut_length": float,
+    "quantity": integer
   }
 ]
 
-กฎสำคัญ:
-- ส่งคืนเฉพาะ JSON เท่านั้น ห้ามมี Markdown code block
-- แปลงหน่วยให้ถูกต้อง (Diameter = mm, Length = m)
-- ถ้าแถวไหนข้อมูลไม่ครบ หรือไม่ใช่ข้อมูลรายการเหล็ก ให้ข้ามไป
-- ถ้าไม่พบข้อมูล ให้ส่งคืน []
+**Parsing Rules**:
+- Intelligently identify column headers even with variations (e.g., "Mark", "Bar No.", "รหัส" all mean bar_mark)
+- Skip header rows, subtotal rows, and summary rows
+- Skip rows with missing critical data
+- Normalize units automatically (mm to m for length, extract mm value for diameter)
+- Handle both Thai and English column names
+- If completely empty or no valid data found, return: []
+
+**Data Type Enforcement**:
+- bar_mark: string (keep original format)
+- diameter: integer in mm
+- cut_length: float in meters (always convert to meters)
+- quantity: integer (whole numbers only)
+
+Return the clean JSON array immediately without any preamble or explanation.
 """
